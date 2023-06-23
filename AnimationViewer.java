@@ -2,7 +2,7 @@
  * ==========================================================================================
  * AnimationViewer.java : Moves shapes around on the screen according to different paths.
  * It is the main drawing area where shapes are added and manipulated.
- * YOUR UPI:
+ *  UPI: jlin865	Name: John Lin
  * ==========================================================================================
  */
 
@@ -10,141 +10,239 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.*;
 import java.awt.event.*;
-import java.io.*;
+import javax.swing.tree.*;
+import javax.swing.event.TreeModelEvent;
+import javax.swing.event.TreeModelListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.event.ListDataListener;
+import java.lang.reflect.Field;
 
 class AnimationViewer extends JComponent implements Runnable {
-	private Thread animationThread = null;		// the thread for animation
-	private static int DELAY = 120;				 // the current animation speed
-	private ArrayList<Shape> shapes = new ArrayList<Shape>(); //create the ArrayList to store shapes
-	private ShapeType currentShapeType=Shape.DEFAULT_SHAPETYPE; // the current shape type,
-	private PathType currentPathType=Shape.DEFAULT_PATHTYPE;	// the current path type
-	private Color currentColor=Shape.DEFAULT_COLOR; // the current fill colour of a shape
+	private Thread animationThread = null; // the thread for animation
+	private static int DELAY = 120; // the current animation speed
+	//removed shapes list
+	private ShapeType currentShapeType = Shape.DEFAULT_SHAPETYPE; // the current shape type,
+	private PathType currentPathType = Shape.DEFAULT_PATHTYPE; // the current path type
+	private Color currentColor = Shape.DEFAULT_COLOR; // the current fill colour of a shape
 	private Color currentBorderColor = Shape.DEFAULT_BORDER_COLOR;
-	private int currentPanelWidth=Shape.DEFAULT_PANEL_WIDTH, currentPanelHeight = Shape.DEFAULT_PANEL_HEIGHT, currentWidth=Shape.DEFAULT_WIDTH, currentHeight=Shape.DEFAULT_HEIGHT;
+	private int currentPanelWidth = Shape.DEFAULT_PANEL_WIDTH, currentPanelHeight = Shape.DEFAULT_PANEL_HEIGHT,currentWidth = Shape.DEFAULT_WIDTH, currentHeight = Shape.DEFAULT_HEIGHT;
+	private String currentLabel = Shape.DEFAULT_LABEL;
+	protected MyModel model;
+	protected NestedShape root;
 
 	public AnimationViewer() {
+		root = new NestedShape(Shape.DEFAULT_PANEL_WIDTH, Shape.DEFAULT_PANEL_HEIGHT);
+		model = new MyModel();
 		start();
 		addMouseListener(new MyMouseAdapter());
+
 	}
-	protected void createNewShape(int x, int y) {
-		switch (currentShapeType) {
-			case RECTANGLE: {
-				shapes.add( new RectangleShape(x, y,currentWidth,currentHeight,currentPanelWidth,currentPanelHeight,currentColor,currentBorderColor,currentPathType));
-                break;
-			}  case OVAL: {
-        		shapes.add( new OvalShape(x, y,currentWidth,currentHeight,currentPanelWidth,currentPanelHeight,currentColor,currentBorderColor,currentPathType));
-                break;
-			} case OCTAGON: {
-				shapes.add( new OctagonShape(x, y,currentWidth,currentHeight,currentPanelWidth,currentPanelHeight,currentColor,currentBorderColor,currentPathType));
-                break;
-		 	}
+
+	public void setCurrentLabel(String text) {
+		currentLabel = text;
+		for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
+			if (currentShape.isSelected()) {
+				currentShape.setLabel(currentLabel);
+			}
 		}
-    }
+	}
+	public void setCurrentColor(Color bc) {
+	    currentColor = bc;
+		for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
+			if (currentShape.isSelected()) {
+				currentShape.setColor(currentColor);
+			}
+		}
+	  }
+	public void setCurrentBorderColor(Color bc) {
+	    currentBorderColor = bc;
+		for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
+			if (currentShape.isSelected()) {
+				currentShape.setBorderColor(currentBorderColor);
+			}
+		}
+	 }
+	public void setCurrentHeight(int h) {
+	    currentHeight = h;
+		for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
+			if (currentShape.isSelected()) {
+				currentShape.setHeight(currentHeight);
+			}
+		}
+	 }
+	public void setCurrentWidth(int w) {
+	    currentWidth = w;
+	    for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
+			if (currentShape.isSelected()) {
+				currentShape.setWidth(currentWidth);
+			  }
+		}
+
+	 }
+	class MyMouseAdapter extends MouseAdapter {
+		public void mouseClicked(MouseEvent e) {
+			boolean found = false;
+			for (int i = 0; i < root.getSize(); i ++) {
+				Shape currentShape = root.getInnerShapeAt(i);
+				if (currentShape.contains(e.getPoint())) { // if the mousepoint is within a shape, then set the shape to
+					currentShape.setSelected(!currentShape.isSelected());
+					found = true;
+				}
+
+			}
+			if (!found) {
+				Shape child = root.createInnerShape(e.getX(), e.getY(), currentWidth, currentHeight, currentColor, currentBorderColor, currentPathType, currentShapeType);
+				model.insertNodeInto(child, root);
+			}
+		}
+	}
 	public final void paintComponent(Graphics g) {
-		for (Shape currentShape: shapes) {
+		super.paintComponent(g);
+		for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
 			currentShape.move();
 			currentShape.draw(g);
 			currentShape.drawHandles(g);
-			currentShape.drawString(g); // changed
+			currentShape.drawString(g);
 		}
 	}
-	public void setCurrentPathType(PathType value) { currentPathType = value; }
-	public void setCurrentShapeType(ShapeType value) { currentShapeType = value; }
-
-	//added changes here
-	public void setCurrentBorderColor(Color bc) {
-		currentBorderColor = bc;
-		for (Shape s: shapes) {
-			if (s.isSelected()) {
-				s.setBorderColor(bc);
-			}
-		}
-	}
-	public Color getCurrentBorderColor() {
-		return currentBorderColor;
-	}
-	private String currentLabel = Shape.DEFAULT_LABEL;
-	public String getCurrentLabel() {
-		return currentLabel;
-	}
-	public void setCurrentLabel(String label) {
-		currentLabel = label;
-		for (Shape s: shapes) {
-			if (s.isSelected()) {
-				s.setLabel(label);
-			}
-		}
-	}
-
-	public void loadShape(String line) {
-		String[] data = line.split(",");
-		String shape = data[0];
-		String pathtype = data[1];
-		PathType st = PathType.valueOf(pathtype);
-		ShapeType s = ShapeType.valueOf(shape);
-		setCurrentPathType(st);
-		setCurrentShapeType(s);
-		
-		System.out.println(shape);
-		System.out.println(pathtype);
-		//create new shape - dont think this part is correct??
-		Shape newShape = null;
-		switch (shape) {
-			case ("OVAL") :
-				newShape = new OvalShape(currentColor, currentBorderColor, currentPathType);
-				break;
-			case ("OCTAGON"):
-				newShape = new OctagonShape(currentColor, currentBorderColor, currentPathType);
-				break;
-			case ("RECTANGLE"):
-				newShape = new RectangleShape(currentColor, currentBorderColor, currentPathType);
-				break;
-			default:
-				newShape = null;
-
-		}
-		shapes.add(newShape);
-		System.out.println(shapes);
-	}
-
-	public void loadShapesFromFile(String filename) {
-		Scanner input = null;
-		try {
-			input = new Scanner(new File(filename));
-			while (input.hasNextLine()) {
-				String temp = input.nextLine();
-				loadShape(temp);
-			}
-
-		} catch (IOException e) {
-			System.out.printf("ERROR: The file '%s' does not exist.%n", filename);
-		}
-		finally {
-			if (input != null) {
-				input.close();
-			}
-		}
-	}
-
-
-	// you don't need to make any changes after this line ______________
-	class MyMouseAdapter extends MouseAdapter {
-		public void mouseClicked( MouseEvent e ) {
-			boolean found = false;
-			for (Shape currentShape: shapes)
-				if ( currentShape.contains( e.getPoint()) ) { // if the mousepoint is within a shape, then set the shape to be selected/deselected
-					currentShape.setSelected( ! currentShape.isSelected() );
-					found = true;
-				}
-			if (!found) createNewShape(e.getX(), e.getY());
-		}
-	}
-	public void update(Graphics g){ paint(g); }
 	public void resetMarginSize() {
 		currentPanelWidth = getWidth();
-		currentPanelHeight = getHeight() ;
-		for (Shape currentShape: shapes)
-			currentShape.resetPanelSize(currentPanelWidth,currentPanelHeight );
+		currentPanelHeight = getHeight();
+	    for (int i = 0; i < root.getSize(); i ++) {
+			Shape currentShape = root.getInnerShapeAt(i);
+			currentShape.resetPanelSize(currentPanelWidth, currentPanelHeight);
+		}
+	}
+
+	//added code
+	
+
+	class MyModel extends AbstractListModel<Shape> implements TreeModel {
+		private ArrayList<Shape> selectedShapes;;
+		public MyModel() {
+			selectedShapes = root.getAllInnerShapes();
+		}
+		public int getSize() {
+			return selectedShapes.size();
+		}
+		public Shape getElementAt(int index) {	
+			return selectedShapes.get(index);
+		}
+		public void reload(NestedShape selected) {
+		    selectedShapes = selected.getAllInnerShapes();
+			fireContentsChanged(this, 0, selectedShapes.size() - 1);
+		}
+		private ArrayList<TreeModelListener> treeModelListeners = new ArrayList<TreeModelListener>();
+		public NestedShape getRoot() {
+			return root;
+		}
+		public boolean isLeaf(Object node) {
+			if (node instanceof NestedShape) {
+				return false;
+			}
+			return true;
+		}
+		public boolean isRoot(Shape selectedNode) {
+			if (root == selectedNode) {
+				return true;
+			}
+			return false;
+		}
+		public Shape getChild(Object parent, int index) {
+			if (parent instanceof NestedShape) {
+				NestedShape n = (NestedShape)parent;
+				if (index < n.getSize() && index >= 0) {
+					return n.getInnerShapeAt(index);
+				}
+			}
+			return null;
+		}
+		public int getChildCount(Object parent) {
+			if (parent instanceof NestedShape) {
+				NestedShape n = (NestedShape)parent;
+				return n.getSize();
+			}
+			return 0;
+		}
+		public int getIndexOfChild(Object parent, Object child) {
+			if (parent instanceof NestedShape) {
+				NestedShape n = (NestedShape)parent;
+				if (n.getAllInnerShapes().contains(child)) {
+					return n.getAllInnerShapes().indexOf(child);
+				}
+			}
+			return -1;
+		}
+		public void addTreeModelListener(final TreeModelListener tml) {
+			treeModelListeners.add(tml);
+		}
+		public void removeTreeModelListener(final TreeModelListener tml) {
+			treeModelListeners.remove(tml);
+		}
+		public void valueForPathChanged(TreePath path, Object newValue) {
+		}
+		public void fireTreeNodesInserted(Object source, Object[] path,int[] childIndices, Object[] children) {
+			TreeModelEvent tEvent = new TreeModelEvent(source, path, childIndices, children);
+			for (TreeModelListener listener: treeModelListeners) {
+				listener.treeNodesInserted(tEvent);
+			}
+		}
+		public void insertNodeInto(Shape newChild, NestedShape parent) {
+			int[] childIndices = {parent.getSize() - 1};
+			Object[] children = {newChild};
+			fireTreeNodesInserted(this, parent.getPath(), childIndices, children);
+			fireIntervalAdded(this, parent.indexOf(newChild), parent.indexOf(newChild));
+		}
+		public void addShapeNode(NestedShape selectedNode) {
+			Shape nestedShape = null;
+			if (selectedNode == root) {
+				nestedShape = root.createInnerShape(0, 0, currentWidth, currentHeight, currentColor, currentBorderColor, currentPathType, currentShapeType);
+			}
+			else {
+				nestedShape = selectedNode.createInnerShape(currentPathType, currentShapeType);
+			}
+			insertNodeInto(nestedShape, selectedNode);
+
+		}
+		public void fireTreeNodesRemoved(Object source, Object[] path, int[] childIndices,Object[] children) {
+			TreeModelEvent tEvent = new TreeModelEvent(source, path, childIndices, children);
+			for (TreeModelListener listener: treeModelListeners) {
+				listener.treeNodesRemoved(tEvent);
+			}
+		}
+		public void removeNodeFromParent(Shape selectedNode) {
+			NestedShape parent = selectedNode.getParent();
+			int index = parent.indexOf(selectedNode);
+			
+			fireIntervalRemoved(this, parent.indexOf(selectedNode), parent.indexOf(selectedNode));
+			
+			parent.removeInnerShape(selectedNode);
+			int[] childIndices = {index};
+			Object[] children = {selectedNode};
+			fireTreeNodesRemoved(this, parent.getPath(), childIndices, children);
+			
+		}
+
+	}
+
+	// you don't need to make any changes after this line ______________
+	public String getCurrentLabel() {return currentLabel;}
+	public int getCurrentHeight() { return currentHeight; }
+	public int getCurrentWidth() { return currentWidth; }
+	public Color getCurrentColor() { return currentColor; }
+	public Color getCurrentBorderColor() { return currentBorderColor; }
+	public void setCurrentShapeType(ShapeType value) {currentShapeType = value;}
+	public void setCurrentPathType(PathType value) {currentPathType = value;}
+	public ShapeType getCurrentShapeType() {return currentShapeType;}
+	public PathType getCurrentPathType() {return currentPathType;}
+	public void update(Graphics g) {
+		paint(g);
 	}
 	public void start() {
 		animationThread = new Thread(this);
@@ -157,14 +255,14 @@ class AnimationViewer extends JComponent implements Runnable {
 	}
 	public void run() {
 		Thread myThread = Thread.currentThread();
-		while(animationThread==myThread) {
+		while (animationThread == myThread) {
 			repaint();
 			pause(DELAY);
 		}
 	}
 	private void pause(int milliseconds) {
 		try {
-			Thread.sleep((long)milliseconds);
-		} catch(InterruptedException ie) {}
+			Thread.sleep((long) milliseconds);
+		} catch (InterruptedException ie) {}
 	}
 }

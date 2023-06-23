@@ -1,9 +1,7 @@
 /*
  *  ============================================================================================
  *  enum which defines the type of paths in A1
- *  YOUR UPI: ANSWER
+ *  UPI: jlin865	Name: John Lin
  *  ============================================================================================
  */
-import java.util.*;
 enum PathType { BOUNCING, FLOATING;}
-

@@ -1,8 +1,7 @@
 /*
  *  ============================================================================================
  *  enum which defines the type of shapes in A1
- *  YOUR UPI: ANSWER
+ *  UPI: jlin865	Name: John Lin
  *  ============================================================================================
  */
-import java.util.*;
-enum ShapeType {RECTANGLE, OVAL, OCTAGON;}
+enum ShapeType { RECTANGLE, OVAL, NESTED;}
